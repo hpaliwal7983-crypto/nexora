@@ -1,0 +1,11 @@
+{
+  "name": "nexora",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexora capacity building and competency intelligence prototype",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
+
