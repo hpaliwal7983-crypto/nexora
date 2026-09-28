@@ -1,30 +1,31 @@
 # Nexora
 
-**Learn. Practice. Prove. Grow.**
+Nexora is a role-based learning workspace for trainees, trainers, and administrators. It serves the browser application and its authenticated API from one Node.js service.
 
-Nexora is a hackathon prototype for **SIH26075 — Capacity Connect**, a capacity-building and learning portal concept. It connects role-based learning, applied practice, competency evidence, and recommendations in one responsive experience.
+## Backend
 
-## Run locally
+- PostgreSQL stores accounts, hashed passwords, revocable sessions, shared workspace content, and each learner's progress.
+- Trainee and trainer registrations start pending. An active administrator approves them.
+- The first administrator is created from `ADMIN_EMAIL` and `ADMIN_PASSWORD` on initial startup. Use a unique password with at least 12 characters. Later administrators can be created from the Admin workspace.
+- Trainers can publish courses, learning links, and questionnaires. Trainees can enroll, save their progress, submit questionnaire answers, and send course feedback.
+- Admin analytics and approval lists are calculated from saved account and learning records.
+- Role checks run in the API. Passwords are scrypt-hashed and sessions use secure, HTTP-only cookies in production.
 
-Run `npm start` and open `http://localhost:4173` in a modern browser. No build step or third-party runtime dependency is required. Google Fonts are optional; the interface falls back to system fonts when offline.
+The Co-pilot remains deterministic guidance based on the learner's saved competencies. Google/Microsoft sign-in, password reset email, hosted file uploads, and a hosted AI model require separate provider configuration and are not enabled by this backend.
 
-## Demo accounts
+## Local run
 
-Choose any role on the welcome screen. Demo sign-in is local and uses sample profiles:
+Use Node.js 20 or newer and a PostgreSQL database. Set `DATABASE_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in the process environment, then run:
 
-- Trainee: Aarav Sharma
-- Trainer: Dr. Meera Nair
-- Admin: Institutional Admin
+```powershell
+npm ci
+npm start
+```
 
-No real account or password is created. Demo progress is saved in this browser's local storage and can be reset from Profile & Settings.
+Open `http://localhost:4173`. The schema is applied automatically when the server starts.
 
-## Prototype scope
+## Render
 
-The current frontend demonstrates responsive role dashboards, courses, a scored assessment, a scenario mission with rubric-based sample evaluation, competency gaps and learning paths, trainer tools, organization overview, announcements, and an explainable deterministic Co-pilot.
+`render.yaml` defines the Nexora web service and its PostgreSQL database. The first Blueprint setup prompts for `ADMIN_EMAIL` and `ADMIN_PASSWORD`; keep these values private. The database uses Render's free plan for the requested 30-day test. Free databases expire 30 days after creation; upgrade to a paid plan before expiry to keep the database and its data. Do not use this free database for production data that must be retained.
 
-Authentication, persistent multi-user data, file delivery, analytics pipelines, and a hosted AI model need a secured backend before production. The Co-pilot is explicitly a deterministic demo helper; no API keys or private services are included in the browser code.
-
-## Problem statement
-
-This prototype is inspired by Smart India Hackathon 2026 problem statement **SIH26075**. Dashboard figures and user profiles shown in the app are illustrative demo data, not official organization statistics.
-
+The health endpoint is `/api/health`. Render should receive `DATABASE_URL` from the database's internal connection string.
