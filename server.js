@@ -188,8 +188,8 @@ async function handleApi(req, res, url) {
     const profile = { employeeId: String(body.employeeId || '').trim(), phone: String(body.phone || '').trim(), department: String(body.department || '').trim(), designation: String(body.designation || '').trim() };
     const hash = await hashPassword(password);
     try {
-      const result = await pool.query("INSERT INTO users(name,email,employee_id,password_hash,role,status,profile) VALUES ($1,$2,$3,$4,$5,'Pending',$6) RETURNING *", [name,email,profile.employeeId||null,hash,role,profile]);
-      return send(res, 201, { user: publicUser(result.rows[0]), message: 'Account request sent. An administrator must approve it before sign in.' });
+      const result = await pool.query("INSERT INTO users(name,email,employee_id,password_hash,role,status,profile) VALUES ($1,$2,$3,$4,$5,'Active',$6) RETURNING *", [name,email,profile.employeeId||null,hash,role,profile]);
+      return send(res, 201, { user: publicUser(result.rows[0]), message: 'Account created. You can sign in now.' });
     } catch (error) { if (error.code === '23505') return fail(res, 409, 'That email or employee ID is already registered.'); throw error; }
   }
   if (req.method === 'POST' && path === '/api/auth/login') {
