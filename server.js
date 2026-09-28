@@ -286,7 +286,7 @@ createServer(async (req,res) => {
     const file = resolve(root,requested);
     if (!file.startsWith(root + sep) && file !== resolve(root,'index.html')) { res.writeHead(403).end('Forbidden'); return; }
     const contents = await readFile(file);
-    res.writeHead(200,{ 'Content-Type':mime[extname(file)]||'application/octet-stream','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; img-src 'self' data: https://images.unsplash.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'" });
+    res.writeHead(200,{ 'Content-Type':mime[extname(file)]||'application/octet-stream','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; img-src 'self' data: https://images.unsplash.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'" });
     if (req.method === 'HEAD') res.end(); else res.end(contents);
   } catch (error) {
     if (req.url?.startsWith('/api/')) return fail(res,error.status||500,error.status?error.message:'Unexpected server error.');
