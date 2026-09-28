@@ -92,6 +92,16 @@ async function migrate() {
       console.log('Initial Nexora administrator created from configured environment values.');
     }
   }
+  const demoEmail = process.env.DEMO_EMAIL?.trim().toLowerCase();
+  const demoPassword = process.env.DEMO_PASSWORD;
+  if (demoEmail && demoPassword && demoPassword.length >= 12) {
+    const exists = await pool.query('SELECT id FROM users WHERE lower(email) = $1', [demoEmail]);
+    if (!exists.rowCount) {
+      const hash = await hashPassword(demoPassword);
+      await pool.query("INSERT INTO users(name,email,password_hash,role,status,profile) VALUES ($1,$2,$3,'Trainee','Active',$4)", [process.env.DEMO_NAME || 'Harsh', demoEmail, hash, { department: 'Meteorology', designation: 'Demo learner' }]);
+      console.log('Public Harsh demo account is ready.');
+    }
+  }
 }
 async function authenticate(req) {
   const raw = cookieValue(req, sessionCookie);
