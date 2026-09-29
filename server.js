@@ -163,17 +163,9 @@ async function migrate() {
       console.log('Initial Nexora administrator created from configured environment values.');
     }
   }
-  const demoEmail = process.env.DEMO_EMAIL?.trim().toLowerCase();
-  const demoPassword = process.env.DEMO_PASSWORD;
-  if (demoEmail && demoPassword && demoPassword.length >= 12) {
-    const exists = await pool.query('SELECT id FROM users WHERE lower(email) = $1', [demoEmail]);
-    if (!exists.rowCount) {
-      const hash = await hashPassword(demoPassword);
-      await pool.query("INSERT INTO users(name,email,password_hash,role,status,profile) VALUES ($1,$2,$3,'Trainee','Active',$4)", [process.env.DEMO_NAME || 'Harsh', demoEmail, hash, { department: 'Meteorology', designation: 'Demo learner' }]);
-      console.log('Public Harsh demo account is ready.');
-    }
-    await pool.query(`UPDATE user_state SET data=data-ARRAY['competencies','completedModules','missionComplete','assessmentDone','assessmentCorrect','assessmentSkipped','assessmentIncorrect','assessmentScore','missionScore','courseProgress','enrolled','events','proofSubmitted']::text[],updated_at=now() WHERE user_id=(SELECT id FROM users WHERE lower(email)=$1)`, [demoEmail]);
-  }
+  const oldDemoEmail=process.env.DEMO_EMAIL?.trim().toLowerCase();
+  if(oldDemoEmail){const oldDemo=await pool.query("SELECT id FROM users WHERE lower(email)=$1 AND lower(name)=lower($2) AND role='Trainee'",[oldDemoEmail,process.env.DEMO_NAME||'Harsh']);if(oldDemo.rowCount){const oldDemoId=oldDemo.rows[0].id,client=await pool.connect();try{await client.query('BEGIN');const ws=(await client.query("SELECT data FROM workspace_state WHERE workspace_id='default' FOR UPDATE")).rows[0]?.data||{};for(const key of ['feedbacks','questionnaireResponses'])ws[key]=(ws[key]||[]).filter(item=>item.userId!==oldDemoId);await client.query("UPDATE workspace_state SET data=$1,updated_at=now() WHERE workspace_id='default'",[JSON.stringify(ws)]);await client.query('DELETE FROM users WHERE id=$1',[oldDemoId]);await client.query('COMMIT');console.log('Removed the retired Harsh demo account and its personal learning records.');}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}}}
+
 }
 async function authenticate(req) {
   const raw = cookieValue(req, sessionCookie);
@@ -295,21 +287,18 @@ async function handleApi(req, res, url) {
     const body = await readJson(req);
     const name = String(body.name || '').trim(); const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || ''); const role = String(body.role || 'Trainee');
-    if (name.length < 2 || name.length > 100 || !/^\S+@\S+\.\S+$/.test(email) || password.length < 12 || !['Trainer','Trainee'].includes(role)) return fail(res, 400, 'Enter a valid name and email, choose Trainer or Trainee, and use a password with at least 12 characters.');
-    const profile = { employeeId: String(body.employeeId || '').trim(), phone: String(body.phone || '').trim(), department: String(body.department || '').trim(), designation: String(body.designation || '').trim(), qualification:String(body.qualification||'').trim(), education:String(body.education||'').trim(), experience:String(body.experience||'').trim(), currentRole:String(body.currentRole||'').trim(), organization:String(body.organization||'').trim(), skills:Array.isArray(body.skills)?body.skills.map(x=>String(x).trim()).filter(Boolean).slice(0,30):[], interests:Array.isArray(body.interests)?body.interests.map(x=>String(x).trim()).filter(Boolean).slice(0,30):[], learningGoals:String(body.learningGoals||'').trim(), specialization:String(body.specialization||'').trim(), competencies:Array.isArray(body.competencies)?body.competencies.map(x=>String(x).trim()).filter(Boolean).slice(0,30):[], trainingExperience:String(body.trainingExperience||'').trim() };
+    const employeeId=String(body.employeeId||'').trim();
+    if (name.length < 2 || name.length > 100 || !/^\S+@\S+\.\S+$/.test(email) || employeeId.length < 2 || employeeId.length > 40 || password.length < 12 || !['Admin','Trainer','Trainee'].includes(role)) return fail(res, 400, 'Enter a valid name, email and Employee ID, choose a role, and use a password with at least 12 characters.');
+    const profile = { employeeId };
+    const duplicate=await pool.query('SELECT 1 FROM users WHERE lower(email)=$1 OR lower(employee_id)=$2 LIMIT 1',[email,employeeId.toLowerCase()]);
+    if(duplicate.rowCount)return fail(res,409,'That email or Employee ID is already registered.');
     const hash = await hashPassword(password);
     try {
-      const status=role==='Trainer'?'Pending':'Active';
-      const result = await pool.query("INSERT INTO users(name,email,employee_id,password_hash,role,status,profile) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *", [name,email,profile.employeeId||null,hash,role,status,profile]);
-      return send(res, 201, { user: publicUser(result.rows[0]), message: role==='Trainer'?'Trainer account created. An administrator must approve it before you can sign in.':'Account created. You can sign in now.' });
+      const status=role==='Trainee'?'Active':'Pending';
+      const result = await pool.query("INSERT INTO users(name,email,employee_id,password_hash,role,status,profile) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *", [name,email,profile.employeeId,hash,role,status,profile]);
+      const message=status==='Pending'?`${role} account created. An administrator must approve it before you can sign in.`:'Account created. You can sign in now with your email or Employee ID.';
+      return send(res, 201, { user: publicUser(result.rows[0]), message });
     } catch (error) { if (error.code === '23505') return fail(res, 409, 'That email or employee ID is already registered.'); throw error; }
-  }
-  if (req.method === 'POST' && path === '/api/auth/demo') {
-    const demoEmail=process.env.DEMO_EMAIL?.trim().toLowerCase();
-    if(!demoEmail)return fail(res,503,'The public demo account is not configured.');
-    const result=await pool.query("SELECT * FROM users WHERE lower(email)=$1 AND role='Trainee' AND status='Active'",[demoEmail]);
-    if(!result.rowCount)return fail(res,503,'The public demo account is unavailable.');
-    return createSession(result.rows[0],res);
   }
   if (req.method === 'POST' && path === '/api/auth/login') {
     const body = await readJson(req); const identity = String(body.identity || '').trim().toLowerCase();
@@ -329,9 +318,10 @@ async function handleApi(req, res, url) {
     if (!requireActive(user,res)) return;
     const body = await readJson(req); const name=String(body.name||'').trim();
     if (name.length < 2 || name.length > 100) return fail(res,400,'Enter a name between 2 and 100 characters.');
-    const profile={ ...user.profile, employeeId:String(body.employeeId??user.profile?.employeeId??'').trim(), department:String(body.department??user.profile?.department??'').trim(), designation:String(body.designation??user.profile?.designation??'').trim(), experience:String(body.experience??user.profile?.experience??'').trim(), qualification:String(body.qualification??user.profile?.qualification??'').trim(), education:String(body.education??user.profile?.education??'').trim(), currentRole:String(body.currentRole??user.profile?.currentRole??'').trim(), organization:String(body.organization??user.profile?.organization??'').trim(), specialization:String(body.specialization??user.profile?.specialization??'').trim(), trainingExperience:String(body.trainingExperience??user.profile?.trainingExperience??'').trim(), learningGoals:String(body.learningGoals??user.profile?.learningGoals??'').trim(), skills:Array.isArray(body.skills)?body.skills.map(x=>String(x).trim()).filter(Boolean).slice(0,30):user.profile?.skills||[], interests:Array.isArray(body.interests)?body.interests.map(x=>String(x).trim()).filter(Boolean).slice(0,30):user.profile?.interests||[], competencies:Array.isArray(body.competencies)?body.competencies.map(x=>String(x).trim()).filter(Boolean).slice(0,30):user.profile?.competencies||[] };
-    const result=await pool.query('UPDATE users SET name=$1,profile=$2,updated_at=now() WHERE id=$3 RETURNING *',[name,profile,user.id]);
-    return send(res,200,{user:publicUser(result.rows[0])});
+    const employeeId=String(body.employeeId??user.employee_id??user.profile?.employeeId??'').trim();
+    if(employeeId.length<2||employeeId.length>40)return fail(res,400,'Employee ID must be between 2 and 40 characters.');
+    const profile={ ...user.profile, employeeId, department:String(body.department??user.profile?.department??'').trim(), designation:String(body.designation??user.profile?.designation??'').trim(), experience:String(body.experience??user.profile?.experience??'').trim(), qualification:String(body.qualification??user.profile?.qualification??'').trim(), education:String(body.education??user.profile?.education??'').trim(), currentRole:String(body.currentRole??user.profile?.currentRole??'').trim(), organization:String(body.organization??user.profile?.organization??'').trim(), specialization:String(body.specialization??user.profile?.specialization??'').trim(), trainingExperience:String(body.trainingExperience??user.profile?.trainingExperience??'').trim(), learningGoals:String(body.learningGoals??user.profile?.learningGoals??'').trim(), skills:Array.isArray(body.skills)?body.skills.map(x=>String(x).trim()).filter(Boolean).slice(0,30):user.profile?.skills||[], interests:Array.isArray(body.interests)?body.interests.map(x=>String(x).trim()).filter(Boolean).slice(0,30):user.profile?.interests||[], competencies:Array.isArray(body.competencies)?body.competencies.map(x=>String(x).trim()).filter(Boolean).slice(0,30):user.profile?.competencies||[] };
+    try{const result=await pool.query('UPDATE users SET name=$1,employee_id=$2,profile=$3,updated_at=now() WHERE id=$4 RETURNING *',[name,employeeId,profile,user.id]);return send(res,200,{user:publicUser(result.rows[0])});}catch(error){if(error.code==='23505')return fail(res,409,'That Employee ID is already registered.');throw error;}
   }
   if (req.method === 'POST' && path === '/api/feedback') {
     if (!requireRole(user,['Trainee'],res)) return;
@@ -521,8 +511,9 @@ async function handleApi(req, res, url) {
   if (req.method === 'POST' && userAction) {
     if (!requireRole(user,['Admin'],res)) return;
     const status = ({approve:'Active',reject:'Rejected',suspend:'Suspended',activate:'Active'})[userAction[2].toLowerCase()];
-    const result = await pool.query('UPDATE users SET status=$1,updated_at=now() WHERE id=$2 AND role<>\'Admin\' RETURNING id,name,email,employee_id,role,status,profile,created_at',[status,userAction[1]]);
-    if (!result.rowCount) return fail(res,404,'User not found or cannot be changed.');
+    const target=(await pool.query('SELECT id,role,status FROM users WHERE id=$1',[userAction[1]])).rows[0];
+    if(!target||target.id===user.id||target.role==='Admin'&&(target.status!=='Pending'||status!=='Active'))return fail(res,404,'User not found or cannot be changed.');
+    const result = await pool.query('UPDATE users SET status=$1,updated_at=now() WHERE id=$2 RETURNING id,name,email,employee_id,role,status,profile,created_at',[status,userAction[1]]);
     return send(res,200,{user:publicUser(result.rows[0])});
   }
   const roleAction=path.match(/^\/api\/users\/([\da-f-]+)\/role$/i);
