@@ -337,7 +337,7 @@ async function handleApi(req, res, url) {
     if(Number(req.headers['content-length']||0)>16_000)return fail(res,413,'Nexora AI requests must be 16 KB or smaller.');
     const body = await readJson(req,16_000), message = String(body.message || '').trim();
     if (!message || message.length > MAX_MESSAGE) return fail(res,400,`Enter a message of ${MAX_MESSAGE} characters or fewer.`);
-    const history = Array.isArray(body.history) ? body.history.slice(-6).filter(item => ['user','assistant'].includes(item?.role) && typeof item?.content === 'string').map(item => ({ role:item.role, content:item.content.slice(0,500) })) : [];
+    const history = Array.isArray(body.history) ? body.history.slice(-16).filter(item => ['user','assistant'].includes(item?.role) && typeof item?.content === 'string').map(item => ({ role:item.role, content:item.content.slice(0,500) })) : [];
     const context = await buildCopilotContext(pool,user,body.route,body.currentCourse);
     if (context.screen.toLowerCase().includes('assessment') && /\b(answer key|correct answer|which answer|give me the answers|solve this assessment)\b/i.test(message)) return send(res,200,{ message:'I can explain the concepts and assessment instructions, but I can’t provide answers to an active assessment. You can return to your learning material for a review.', source:'safety', requestId });
     const factualAnswer = answerFromContext(message,context);
@@ -578,7 +578,7 @@ createServer(async (req,res) => {
     if (url.pathname.startsWith('/api/')) return await handleApi(req,res,url);
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405,{Allow:'GET, HEAD'}).end(); return; }
     const requested = url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname).replace(/^\/+/, '');
-    if(!['index.html','app.css','app.js','onboarding-mountains.jpg'].includes(requested)){res.writeHead(404).end('Not found');return;}
+    if(!['index.html','app.css','app.js','copilot-browser.js','onboarding-mountains.jpg'].includes(requested)){res.writeHead(404).end('Not found');return;}
     const file = resolve(root,requested);
     if (!file.startsWith(root + sep) && file !== resolve(root,'index.html')) { res.writeHead(403).end('Forbidden'); return; }
     const contents = await readFile(file);

@@ -121,6 +121,12 @@
 .copilot-center-input{flex:none;width:calc(100% - 44px);min-height:67px;margin:8px 22px 5px!important;padding:8px 12px!important;border:1px solid #45447e!important;border-radius:38px!important;background:#11162e!important;box-shadow:0 0 20px #5e44b534}
 .copilot-center-input input{font-size:15px!important;color:#f6f4ff}.copilot-center-input input::placeholder{color:#8c93b3}.copilot-center-input button{width:45px!important;height:45px!important;border-radius:50%!important;font-size:21px!important}.copilot-center-input .copilot-mic{background:#1e2445!important;color:#e6ddff;border:1px solid #363d70}
 .copilot-center-status{flex:none;min-height:26px;color:#a8adca;font-size:11px}
+.copilot-center-main.has-conversation{justify-content:flex-start;align-items:stretch;text-align:left;padding-top:8px}
+.copilot-center-main.has-conversation>.copilot-center-mascot,.copilot-center-main.has-conversation>.copilot-center-welcome,.copilot-center-main.has-conversation>.copilot-center-prompt,.copilot-center-main.has-conversation>.copilot-center-voice,.copilot-center-main.has-conversation>.copilot-center-actions{display:none}
+.copilot-center-thread{width:min(720px,100%);min-height:0;flex:1;overflow:auto;padding:12px 4px;scrollbar-width:thin;scrollbar-color:#51418a transparent}
+.copilot-center-thread .copilot-message{max-width:min(88%,650px)}.copilot-center-thread .copilot-message p{font-size:14px;line-height:1.55;white-space:pre-wrap}.copilot-center-thread .copilot-message.bot>div{border-radius:5px 18px 18px;background:#171b31;border-color:#383568;padding:13px 16px}.copilot-center-thread .copilot-message.user p{font-size:14px;background:#39266b;border-radius:18px 5px 18px 18px}
+.copilot-reference-thread.has-conversation .copilot-mascot-wrap,.copilot-reference-thread.has-conversation>.copilot-help-cta,.copilot-reference-thread.has-conversation>.copilot-actions-label,.copilot-reference-thread.has-conversation>.copilot-reference-actions,.copilot-reference-thread.has-conversation>.copilot-recent-heading,.copilot-reference-thread.has-conversation>.copilot-reference-recent{display:none}
+.copilot-reference-thread.has-conversation{display:flex;flex-direction:column}.copilot-reference-thread.has-conversation .copilot-message p{font-size:13px;line-height:1.55;white-space:pre-wrap}
 @media(max-width:650px){.copilot-center-overlay{padding:0}.copilot-center-panel{width:100vw;height:100dvh;max-height:none;border:0;border-radius:0}.copilot-center-header{padding:14px 18px}.copilot-center-main{justify-content:flex-start;padding:0 18px 14px}.copilot-center-mascot{width:min(390px,90vw);height:clamp(225px,33vh,310px);margin-bottom:-38px}.copilot-center-welcome{padding:16px 18px;border-radius:24px}.copilot-center-welcome p{font-size:14px}.copilot-center-voice{min-height:138px;margin-top:6px}.copilot-mic-orb{width:96px;height:96px}.copilot-center-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}.copilot-center-action{min-height:82px;flex-direction:row;justify-content:flex-start;padding:10px 13px;border-radius:16px;font-size:13px}.copilot-center-action span{font-size:24px}.copilot-center-input{width:calc(100% - 32px);margin:8px 16px 4px!important}.copilot-center-status{min-height:24px}}
 @media(max-height:740px) and (min-width:651px){.copilot-center-main{justify-content:flex-start}.copilot-center-mascot{height:225px}.copilot-center-voice{min-height:125px}.copilot-center-action{min-height:82px}}
 
@@ -250,7 +256,6 @@
 @media(max-width:650px){.copilot-center-overlay{padding:0}.copilot-center-panel{width:100vw;height:100dvh;max-height:none;border:0;border-radius:0}.copilot-center-header{padding:14px 18px}.copilot-center-main{justify-content:flex-start;padding:0 18px 14px}.copilot-center-mascot{width:min(390px,90vw);height:clamp(225px,33vh,310px);margin-bottom:-38px}.copilot-center-welcome{padding:16px 18px;border-radius:24px}.copilot-center-welcome p{font-size:14px}.copilot-center-voice{min-height:138px;margin-top:6px}.copilot-mic-orb{width:96px;height:96px}.copilot-center-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}.copilot-center-action{min-height:82px;flex-direction:row;justify-content:flex-start;padding:10px 13px;border-radius:16px;font-size:13px}.copilot-center-action span{font-size:24px}.copilot-center-input{width:calc(100% - 32px);margin:8px 16px 4px!important}.copilot-center-status{min-height:24px}}
 @media(max-height:740px) and (min-width:651px){.copilot-center-main{justify-content:flex-start}.copilot-center-mascot{height:225px}.copilot-center-voice{min-height:125px}.copilot-center-action{min-height:82px}}
 
-
 /* Keep the first-login co-pilot over the dashboard, with every action in view. */
 .copilot-center-overlay{background:rgba(3,5,16,.22);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px)}
 .copilot-center-panel{width:min(1000px,100vw);height:min(100dvh,960px);max-height:100dvh;overflow:hidden;border:0;border-radius:0;background:transparent;box-shadow:none}
@@ -264,7 +269,50 @@
 .copilot-center-action{min-height:clamp(58px,10dvh,96px)}
 .copilot-center-input{min-height:62px;margin:5px 22px 2px!important}
 .copilot-center-status{min-height:20px}
-@media(max-width:650px){.copilot-center-overlay{padding:0}.copilot-center-panel{width:100vw;height:100dvh;max-height:100dvh}.copilot-center-header{padding:8px 14px}.copilot-center-main{justify-content:space-evenly;gap:clamp(0px,.45dvh,4px);padding:0 14px 4px}.copilot-center-mascot{width:min(420px,86vw);height:clamp(200px,31dvh,300px);margin-bottom:-36px}.copilot-center-welcome{width:min(600px,100%);padding:12px 16px;border-radius:23px}.copilot-center-welcome h1{font-size:clamp(20px,5vw,25px)}.copilot-center-welcome p{font-size:13px;line-height:1.4}.copilot-center-prompt{padding:7px 20px;font-size:15px}.copilot-center-voice{min-height:clamp(92px,14dvh,120px);gap:8px;margin:0}.copilot-mic-orb{width:82px;height:82px}.copilot-center-voice .copilot-wave{font-size:23px}.copilot-center-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;margin-top:2px}.copilot-center-action{min-height:clamp(54px,8dvh,68px);flex-direction:row;justify-content:flex-start;padding:8px 11px;border-radius:16px;font-size:13px}.copilot-center-action span{font-size:23px}.copilot-center-input{width:calc(100% - 24px);min-height:58px;margin:4px 12px 0!important}.copilot-center-status{min-height:18px}}
-@media(max-height:740px){.copilot-center-header{padding-top:6px;padding-bottom:6px}.copilot-center-main{justify-content:space-evenly}.copilot-center-mascot{height:clamp(92px,17dvh,128px);margin-bottom:-30px}.copilot-center-welcome{padding-top:10px;padding-bottom:10px}.copilot-center-welcome h1{font-size:21px}.copilot-center-welcome p{font-size:13px}.copilot-center-prompt{padding:6px 18px;font-size:14px}.copilot-center-voice{min-height:clamp(76px,13dvh,96px)}.copilot-mic-orb{width:70px;height:70px}.copilot-center-actions{margin-top:2px}.copilot-center-action{min-height:52px}.copilot-center-input{min-height:54px}.copilot-center-status{min-height:16px}}
-@media(max-height:740px) and (min-width:651px){.copilot-center-mascot{width:min(420px,60vw);height:clamp(145px,24dvh,190px);margin-bottom:-38px}}
-@media(max-width:650px) and (max-height:740px){.copilot-center-mascot{height:clamp(150px,23dvh,190px)}.copilot-center-voice{min-height:clamp(78px,11dvh,90px)}}
+@media(max-width:650px){
+  .copilot-center-overlay{padding:0}
+  .copilot-center-panel{width:100vw;height:100dvh;max-height:100dvh}
+  .copilot-center-header{padding:8px 14px}
+  .copilot-center-main{justify-content:space-evenly;gap:clamp(0px,.45dvh,4px);padding:0 14px 4px}
+  .copilot-center-mascot{width:min(420px,86vw);height:clamp(200px,31dvh,300px);margin-bottom:-36px}
+  .copilot-center-welcome{width:min(600px,100%);padding:12px 16px;border-radius:23px}
+  .copilot-center-welcome h1{font-size:clamp(20px,5vw,25px)}
+  .copilot-center-welcome p{font-size:13px;line-height:1.4}
+  .copilot-center-prompt{padding:7px 20px;font-size:15px}
+  .copilot-center-voice{min-height:clamp(92px,14dvh,120px);gap:8px;margin:0}
+  .copilot-mic-orb{width:82px;height:82px}
+  .copilot-center-voice .copilot-wave{font-size:23px}
+  .copilot-center-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;margin-top:2px}
+  .copilot-center-action{min-height:clamp(54px,8dvh,68px);flex-direction:row;justify-content:flex-start;padding:8px 11px;border-radius:16px;font-size:13px}
+  .copilot-center-action span{font-size:23px}
+  .copilot-center-input{width:calc(100% - 24px);min-height:58px;margin:4px 12px 0!important}
+  .copilot-center-status{min-height:18px}
+}
+@media(max-height:740px){
+  .copilot-center-header{padding-top:6px;padding-bottom:6px}
+  .copilot-center-main{justify-content:space-evenly}
+  .copilot-center-mascot{height:clamp(92px,17dvh,128px);margin-bottom:-30px}
+  .copilot-center-welcome{padding-top:10px;padding-bottom:10px}
+  .copilot-center-welcome h1{font-size:21px}
+  .copilot-center-welcome p{font-size:13px}
+  .copilot-center-prompt{padding:6px 18px;font-size:14px}
+  .copilot-center-voice{min-height:clamp(76px,13dvh,96px)}
+  .copilot-mic-orb{width:70px;height:70px}
+  .copilot-center-actions{margin-top:2px}
+  .copilot-center-action{min-height:52px}
+  .copilot-center-input{min-height:54px}
+  .copilot-center-status{min-height:16px}
+}
+@media(max-height:740px) and (min-width:651px){
+  .copilot-center-mascot{width:min(420px,60vw);height:clamp(145px,24dvh,190px);margin-bottom:-38px}
+}
+@media(max-width:650px) and (max-height:740px){
+  .copilot-center-mascot{height:clamp(150px,23dvh,190px)}
+  .copilot-center-voice{min-height:clamp(78px,11dvh,90px)}
+}
+
+/* Keep a clear, reopenable Co-pilot launcher at the bottom-right after minimizing welcome. */
+.copilot-fab.copilot-fab-minimized{z-index:40;right:18px;bottom:18px;min-height:54px;padding:10px 16px;border-color:#9270ed;background:linear-gradient(115deg,#6638de,#41219b);box-shadow:0 10px 34px #000b,0 0 26px #8552ff70;font-size:12px}
+.copilot-fab.copilot-fab-minimized span{width:28px;height:28px;border-radius:50%;background:#ffffff24;color:#fff;font-size:18px}
+.copilot-fab.copilot-fab-minimized b{font-size:12px}
+@media(max-width:650px){.copilot-fab.copilot-fab-minimized{right:14px;bottom:calc(14px + env(safe-area-inset-bottom));min-height:50px}}

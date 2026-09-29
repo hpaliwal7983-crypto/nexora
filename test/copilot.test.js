@@ -10,7 +10,11 @@ const traineeContext = { learning: {
 
 test('navigation commands resolve locally without an AI provider', () => {
   assert.deepEqual(navigationIntent('Open my courses', 'Trainee'), { type: 'NAVIGATE', route: 'My Learning' });
+  assert.deepEqual(navigationIntent('Take me to my courses', 'Trainee'), { type: 'NAVIGATE', route: 'My Learning' });
+  assert.deepEqual(navigationIntent('Where are my certificates?', 'Trainee'), { type: 'NAVIGATE', route: 'Capability Passport' });
   assert.deepEqual(navigationIntent('Create a course', 'Trainer'), { type: 'NAVIGATE', route: 'Create Course' });
+  assert.deepEqual(navigationIntent('Open the trainer library', 'Trainer'), { type: 'NAVIGATE', route: 'Trainer Library' });
+  assert.deepEqual(navigationIntent('Show pending approvals', 'Admin'), { type: 'NAVIGATE', route: 'Approvals' });
   assert.deepEqual(navigationIntent('Create a course', 'Trainee'), { type: 'DENY', message: 'Course creation is available to trainers.' });
   assert.equal(navigationIntent('Approve this trainer', 'Trainee').type, 'DENY');
 });
@@ -26,4 +30,10 @@ test('admin counts and trainer pending submissions are bounded to their role con
   assert.equal(answerFromContext('Show pending approvals',admin),'There are 2 account approvals pending.');
   const trainer={training:{questionnaires:[{title:'Review 1',pending:3,pendingLearners:['Ari','Sam']}],upcomingDeadlines:[]}};
   assert.equal(answerFromContext("Who hasn't submitted?",trainer),'Review 1: 3 pending (Ari, Sam)');
+});
+
+test('no-data replies do not invent a score or certificate', () => {
+  const empty = { learning: { enrollments: [], assessments: [], certificates: [], upcomingQuestionnaires: [] } };
+  assert.equal(answerFromContext('What is my score?', empty), 'I do not have a completed assessment recorded yet.');
+  assert.equal(answerFromContext('Show my certificates', empty), 'There are no certificates recorded on your account yet.');
 });

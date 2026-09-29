@@ -29,7 +29,10 @@ export async function generateCopilotResponse({ system, history, message, timeou
       if (typeof text !== 'string' || !text.trim()) throw Object.assign(new Error('AI provider returned an empty response.'), { code: 'invalid_response' });
       return { text: text.trim().slice(0, 1800), provider: settings.provider, model: settings.model, latencyMs: Date.now() - startedAt };
     } catch (error) {
-      if (error.name === 'AbortError') throw Object.assign(new Error('AI provider timed out.'), { code: 'timeout' });
+      if (error.name === 'AbortError') {
+        if (attempt === 0) { await new Promise(resolve => setTimeout(resolve, 350)); continue; }
+        throw Object.assign(new Error('AI provider timed out.'), { code: 'timeout' });
+      }
       if (attempt === 0 && error instanceof TypeError) { await new Promise(resolve => setTimeout(resolve, 350)); continue; }
       throw error;
     } finally { clearTimeout(timeout); }
