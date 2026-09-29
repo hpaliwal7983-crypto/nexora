@@ -5,10 +5,11 @@ Nexora is a role-based learning workspace for trainees, trainers, and administra
 ## Backend
 
 - PostgreSQL stores accounts, hashed passwords, revocable sessions, shared workspace content, and each learner's progress.
-- Trainee and trainer registrations become active immediately. Admin accounts remain provisioned by the workspace owner.
+- Trainee registrations become active immediately. Trainer registrations wait for an administrator to approve them. Admin accounts are provisioned by the workspace owner.
 - A public, low-privilege Harsh demo account is available on the sign-in page for walkthroughs; demo visitors share its sample learning progress.
 - The first administrator is created from `ADMIN_EMAIL` and `ADMIN_PASSWORD` on initial startup. Use a unique password with at least 12 characters. Later administrators can be created from the Admin workspace.
-- Trainers can publish courses, learning links, and questionnaires. Trainees can enroll, save their progress, submit questionnaire answers, and send course feedback.
+- Trainees start with an empty personal learning record, then enroll in a course, complete its modules, and take its server-scored assessment. Scores of 70% or more issue a saved course certificate.
+- Trainers can publish owned courses, upload course resources, assign deadline-based questionnaires, and review trainee skill evidence. Trainees can submit responses before deadlines and send feedback after completing a course.
 - Admin analytics and approval lists are calculated from saved account and learning records.
 - Role checks run in the API. Passwords are scrypt-hashed and sessions use secure, HTTP-only cookies in production.
 
