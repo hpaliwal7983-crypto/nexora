@@ -6,12 +6,10 @@
   "description": "Nexora capacity building and competency intelligence prototype",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check app.js && node --check domain.js",
+    "check": "node --check server.js && node --check app.js && node --check domain.js && node --check ai-provider.js && node --check copilot-service.js",
     "test": "node --test"
   },
   "dependencies": {
     "pg": "^8.16.3"
   }
 }
-
-

@@ -6,6 +6,7 @@ import { randomBytes, scrypt as scryptCallback, timingSafeEqual, createHash } fr
 import { promisify } from 'node:util';
 import pg from 'pg';
 import { scoreAssessment, scoreMissionResponse } from './domain.js';
+import { answerFromContext, buildCopilotContext, MAX_MESSAGE, reasonWithAI } from './copilot-service.js';
 
 const { Pool } = pg;
 const scrypt = promisify(scryptCallback);
@@ -15,6 +16,22 @@ const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' };
 const sessionCookie = 'nexora_session';
 const publicUser = ({ id, name, email, role, status, profile, created_at }) => ({ id, name, email, role, status, profile, createdAt: created_at });
+const copilotWindows = new Map();
+const copilotAiWindows = new Map();
+function copilotRateLimit(userId, now = Date.now()) {
+  const key = String(userId), entries = (copilotWindows.get(key) || []).filter(time => now - time < 60_000);
+  if (entries.length >= 24) { copilotWindows.set(key, entries); return false; }
+  entries.push(now); copilotWindows.set(key, entries);
+  if (copilotWindows.size > 5000) for (const [id, times] of copilotWindows) if (!times.some(time => now - time < 60_000)) copilotWindows.delete(id);
+  return true;
+}
+function copilotAiRateLimit(userId, now = Date.now()) {
+  const key=String(userId),entries=(copilotAiWindows.get(key)||[]).filter(time=>now-time<5*60_000);
+  if(entries.length>=8){copilotAiWindows.set(key,entries);return false;}
+  entries.push(now);copilotAiWindows.set(key,entries);
+  if(copilotAiWindows.size>5000)for(const [id,times] of copilotAiWindows)if(!times.some(time=>now-time<5*60_000))copilotAiWindows.delete(id);
+  return true;
+}
 function assessmentKeyFor(course){
   const subject=String(course?.subject||course?.title||'').toLowerCase();
   if(subject.includes('analysis')||subject.includes('data'))return [1,1,0];
@@ -34,11 +51,11 @@ function send(res, status, body, headers = {}) {
   res.end(JSON.stringify(body));
 }
 function fail(res, status, error) { send(res, status, { error }); }
-async function readJson(req) {
+async function readJson(req, maxBytes = 1_000_000) {
   let raw = '';
   for await (const chunk of req) {
     raw += chunk;
-    if (raw.length > 1_000_000) throw Object.assign(new Error('Request is too large.'), { status: 413 });
+    if (raw.length > maxBytes) throw Object.assign(new Error('Request is too large.'), { status: 413 });
   }
   try { return raw ? JSON.parse(raw) : {}; } catch { throw Object.assign(new Error('Invalid JSON.'), { status: 400 }); }
 }
@@ -313,6 +330,31 @@ async function handleApi(req, res, url) {
     return send(res,204,{}, {'Set-Cookie':`${sessionCookie}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`});
   }
   const user = await authenticate(req);
+  if (req.method === 'POST' && path === '/api/ai/copilot') {
+    if (!requireActive(user,res)) return;
+    if (!copilotRateLimit(user.id)) return fail(res,429,'You have sent too many Nexora AI requests. Wait a moment and try again.');
+    const requestId = randomBytes(8).toString('hex'), startedAt = Date.now();
+    if(Number(req.headers['content-length']||0)>16_000)return fail(res,413,'Nexora AI requests must be 16 KB or smaller.');
+    const body = await readJson(req,16_000), message = String(body.message || '').trim();
+    if (!message || message.length > MAX_MESSAGE) return fail(res,400,`Enter a message of ${MAX_MESSAGE} characters or fewer.`);
+    const history = Array.isArray(body.history) ? body.history.slice(-6).filter(item => ['user','assistant'].includes(item?.role) && typeof item?.content === 'string').map(item => ({ role:item.role, content:item.content.slice(0,500) })) : [];
+    const context = await buildCopilotContext(pool,user,body.route,body.currentCourse);
+    if (context.screen.toLowerCase().includes('assessment') && /\b(answer key|correct answer|which answer|give me the answers|solve this assessment)\b/i.test(message)) return send(res,200,{ message:'I can explain the concepts and assessment instructions, but I can’t provide answers to an active assessment. You can return to your learning material for a review.', source:'safety', requestId });
+    const factualAnswer = answerFromContext(message,context);
+    if (factualAnswer) return send(res,200,{ message:factualAnswer, source:'application-data', requestId });
+    if (!copilotAiRateLimit(user.id)) return fail(res,429,'Nexora AI reasoning is temporarily rate limited. You can still use navigation and account-data answers.');
+    try {
+      const result = await reasonWithAI(message,history,context);
+      console.info(JSON.stringify({ event:'copilot.request', requestId, provider:result.provider, model:result.model, role:user.role, latencyMs:result.latencyMs, status:200 }));
+      return send(res,200,{ message:result.text, source:'ai', requestId });
+    } catch (error) {
+      const transient = error.code === 'timeout' || error.code === 'rate_limit' || error.code === 'provider';
+      const status = error.code === 'configuration' ? 503 : error.code === 'rate_limit' ? 429 : 503;
+      const userMessage = error.code === 'configuration' ? 'AI reasoning is not configured yet. You can still use Nexora AI for navigation and account data.' : error.code === 'rate_limit' ? 'AI reasoning is temporarily rate limited. You can still use Nexora AI for navigation and account data.' : 'AI reasoning is temporarily unavailable. You can still use Nexora normally.';
+      console.warn(JSON.stringify({ event:'copilot.request', requestId, provider:String(process.env.AI_PROVIDER||'openrouter'), model:String(process.env.AI_MODEL||''), role:user.role, latencyMs:Date.now()-startedAt, status, category:error.code||'provider_error', retryable:transient }));
+      return send(res,status,{ error:userMessage, code:error.code||'provider_error', requestId });
+    }
+  }
   if (req.method === 'GET' && path === '/api/auth/me') return user ? send(res,200,{user:publicUser(user)}) : fail(res,401,'Not signed in.');
   if (req.method === 'PATCH' && path === '/api/profile') {
     if (!requireActive(user,res)) return;
