@@ -6,17 +6,17 @@ const icons = {
 const navByRole = {
   Trainee:[['Home','home'],['My Learning','book'],['Courses','compass'],['Assessments','check'],['Mission Lab','target'],['Capability DNA','brain'],['Competency Gaps','chart'],['Learning Path','path'],['Skill Proof','award'],['Capability Passport','shield'],['Capability Replay','clock'],['Announcements','bell'],['Profile & Settings','user']],
   Trainer:[['Home','home'],['My Courses','book'],['Create Course','plus'],['Co-pilot','check'],['Trainer Library','file'],['Trainees','users'],['Performance','chart'],['Competencies','brain'],['Profile & Settings','user']],
-  Admin:[['Dashboard','home'],['Users','users'],['Approvals','check'],['Trainers','user'],['Courses','book'],['Assessments','check'],['Competency Mapping','link'],['Organization Competency','chart'],['Analytics','chart'],['Announcements','bell'],['Content','file'],['Co-pilot','settings']]
+  Admin:[['Dashboard','home'],['My Courses','book'],['Create Course','plus'],['Trainer Library','file'],['Trainees','users'],['Performance','chart'],['Competencies','brain'],['Users','users'],['Approvals','check'],['Trainers','user'],['Courses','book'],['Assessments','check'],['Competency Mapping','link'],['Organization Competency','chart'],['Analytics','chart'],['Announcements','bell'],['Content','file'],['Co-pilot','settings'],['Profile & Settings','user']]
 };
 const mobileNavByRole = {
   Trainee:[['Home','home'],['Courses','compass'],['Mission Lab','target'],['Capability DNA','brain'],['Profile & Settings','user']],
   Trainer:[['Home','home'],['My Courses','book'],['Trainer Library','file'],['Trainees','users'],['Profile & Settings','user']],
-  Admin:[['Dashboard','home'],['Users','users'],['Approvals','check'],['Competency Mapping','link'],['Analytics','chart']]
+  Admin:[['Dashboard','home'],['My Courses','book'],['Create Course','plus'],['Trainer Library','file'],['Trainees','users'],['Users','users'],['Approvals','check'],['Analytics','chart'],['Profile & Settings','user']]
 };
 const routeAccess = {
   Trainee:new Set(['Home','Dashboard','My Learning','Courses','Assessments','Assessment Result','Mission Lab','Mission Interface','Mission Result','Capability DNA','Competency Gaps','Learning Path','Skill Proof','Capability Passport','Capability Replay','Announcements','Profile & Settings','Co-pilot']),
   Trainer:new Set(['Home','Dashboard','My Courses','Courses','Create Course','Assessments','Trainees','Performance','Competencies','Trainer Library','Announcements','Profile & Settings','Co-pilot']),
-  Admin:new Set(['Home','Dashboard','Users','Approvals','Trainers','Courses','Assessments','Competency Mapping','Organization Competency','Analytics','Announcements','Content','Profile & Settings','Co-pilot'])
+  Admin:new Set(['Home','Dashboard','My Courses','Users','Approvals','Trainers','Courses','Create Course','Assessments','Trainees','Performance','Competencies','Trainer Library','Competency Mapping','Organization Competency','Analytics','Announcements','Content','Profile & Settings','Co-pilot'])
 };
 const courses = [
   {id:'system-radar-basics',title:'Radar Meteorology Basics',subject:'Radar',level:'Beginner',modules:3,teacher:'Nexora Learning Team',rating:'4.8',duration:'6h 30m',image:'radar',description:'Learn radar fundamentals and interpret real-world data for better forecasting decisions.',skills:['Understand radar principles','Interpret reflectivity patterns','Apply in real-world scenarios']},
