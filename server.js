@@ -173,11 +173,14 @@ async function migrate() {
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (adminEmail && adminPassword && adminPassword.length >= 12) {
-    const exists = await pool.query('SELECT id FROM users WHERE lower(email) = $1', [adminEmail]);
-    if (!exists.rowCount) {
+    const existingAdmin = await pool.query('SELECT id,role,status FROM users WHERE lower(email) = $1', [adminEmail]);
+    if (!existingAdmin.rowCount) {
       const hash = await hashPassword(adminPassword);
       await pool.query("INSERT INTO users(name,email,password_hash,role,status,profile) VALUES ($1,$2,$3,'Admin','Active',$4)", [process.env.ADMIN_NAME || 'Nexora Administrator', adminEmail, hash, { department: 'Administration', designation: 'Administrator' }]);
       console.log('Initial Nexora administrator created from configured environment values.');
+    } else if (existingAdmin.rows[0].role === 'Admin' && existingAdmin.rows[0].status === 'Pending') {
+      await pool.query("UPDATE users SET status='Active',updated_at=now() WHERE id=$1 AND role='Admin' AND status='Pending'", [existingAdmin.rows[0].id]);
+      console.log('Activated the configured Nexora administrator account that was awaiting approval.');
     }
   }
   const oldDemoEmail=process.env.DEMO_EMAIL?.trim().toLowerCase();
