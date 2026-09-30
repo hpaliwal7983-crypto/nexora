@@ -183,6 +183,8 @@ async function migrate() {
       console.log('Activated the configured Nexora administrator account that was awaiting approval.');
     }
   }
+  const pendingAccounts=await pool.query("UPDATE users SET status='Active',updated_at=now() WHERE status='Pending'");
+  if(pendingAccounts.rowCount)console.log(`Activated ${pendingAccounts.rowCount} pending Nexora account(s) during the approval-policy update.`);
   const oldDemoEmail=process.env.DEMO_EMAIL?.trim().toLowerCase();
   if(oldDemoEmail){const oldDemo=await pool.query("SELECT id FROM users WHERE lower(email)=$1 AND lower(name)=lower($2) AND role='Trainee'",[oldDemoEmail,process.env.DEMO_NAME||'Harsh']);if(oldDemo.rowCount){const oldDemoId=oldDemo.rows[0].id,client=await pool.connect();try{await client.query('BEGIN');const ws=(await client.query("SELECT data FROM workspace_state WHERE workspace_id='default' FOR UPDATE")).rows[0]?.data||{};for(const key of ['feedbacks','questionnaireResponses'])ws[key]=(ws[key]||[]).filter(item=>item.userId!==oldDemoId);await client.query("UPDATE workspace_state SET data=$1,updated_at=now() WHERE workspace_id='default'",[JSON.stringify(ws)]);await client.query('DELETE FROM users WHERE id=$1',[oldDemoId]);await client.query('COMMIT');console.log('Removed the retired Harsh demo account and its personal learning records.');}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}}}
 
@@ -314,9 +316,9 @@ async function handleApi(req, res, url) {
     if(duplicate.rowCount)return fail(res,409,'That email or Employee ID is already registered.');
     const hash = await hashPassword(password);
     try {
-      const status=role==='Trainee'?'Active':'Pending';
+      const status='Active';
       const result = await pool.query("INSERT INTO users(name,email,employee_id,password_hash,role,status,profile) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *", [name,email,profile.employeeId,hash,role,status,profile]);
-      const message=status==='Pending'?`${role} account created. An administrator must approve it before you can sign in.`:'Account created. You can sign in now with your email or Employee ID.';
+      const message='Account created. You can sign in now with your email or Employee ID.';
       return send(res, 201, { user: publicUser(result.rows[0]), message });
     } catch (error) { if (error.code === '23505') return fail(res, 409, 'That email or employee ID is already registered.'); throw error; }
   }
@@ -551,7 +553,7 @@ async function handleApi(req, res, url) {
     if (!requireRole(user,['Admin'],res)) return;
     const body=await readJson(req),name=String(body.name||'').trim(),email=String(body.email||'').trim().toLowerCase(),password=String(body.password||''),role=String(body.role||'Trainee');
     if(name.length<2||name.length>100||!/^\S+@\S+\.\S+$/.test(email)||password.length<12||!['Admin','Trainer','Trainee'].includes(role))return fail(res,400,'Enter a valid name, email, role and a password of at least 12 characters.');
-    try { const hash=await hashPassword(password);const status=role==='Admin'||role==='Trainee'?'Active':'Pending';const result=await pool.query('INSERT INTO users(name,email,password_hash,role,status,profile) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,name,email,employee_id,role,status,profile,created_at',[name,email,hash,role,status,{department:String(body.department||'').trim(),designation:role}]);return send(res,201,{user:publicUser(result.rows[0])}); }
+    try { const hash=await hashPassword(password);const status='Active';const result=await pool.query('INSERT INTO users(name,email,password_hash,role,status,profile) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,name,email,employee_id,role,status,profile,created_at',[name,email,hash,role,status,{department:String(body.department||'').trim(),designation:role}]);return send(res,201,{user:publicUser(result.rows[0])}); }
     catch(error){if(error.code==='23505')return fail(res,409,'That email is already registered.');throw error;}
   }
   const userAction = path.match(/^\/api\/users\/([\da-f-]+)\/(approve|reject|suspend|activate)$/i);
@@ -568,7 +570,7 @@ async function handleApi(req, res, url) {
     if(!requireRole(user,['Admin'],res))return;
     const body=await readJson(req),role=String(body.role||'');
     if(!['Admin','Trainer','Trainee'].includes(role))return fail(res,400,'Choose a valid platform role.');
-    const status=role==='Trainer'?'Pending':'Active';
+    const status='Active';
     const result=await pool.query('UPDATE users SET role=$1,status=$2,updated_at=now() WHERE id=$3 AND id<>$4 RETURNING id,name,email,employee_id,role,status,profile,created_at',[role,status,roleAction[1],user.id]);
     if(!result.rowCount)return fail(res,404,'User not found or you cannot change your own role.');
     return send(res,200,{user:publicUser(result.rows[0])});
